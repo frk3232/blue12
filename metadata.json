@@ -1,0 +1,5 @@
+{
+  "name": "Blue1",
+  "description": "AI-Driven Proactive Urban Mobility. Predicts traffic bottlenecks in Kerala (Kochi/Trivandrum) using real-time data and Gemini AI.",
+  "requestFramePermissions": ["geolocation"]
+}

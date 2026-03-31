@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Manages user-specific settings and saved locations.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique ID of the user." },
+        "homeCity": { "type": "string", "description": "User's home city (e.g., Kochi, Trivandrum)." },
+        "savedDestinations": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of saved destination names or addresses."
+        }
+      },
+      "required": ["uid"]
+    },
+    "TrafficLog": {
+      "title": "Traffic Log",
+      "description": "Stores traffic snapshots for AI analysis and forecasting.",
+      "type": "object",
+      "properties": {
+        "routeId": { "type": "string", "description": "Identifier for the route." },
+        "currentTravelTime": { "type": "number", "description": "Current travel time in seconds." },
+        "aiPredictedTime": { "type": "number", "description": "AI-predicted travel time in seconds." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the log was created." }
+      },
+      "required": ["routeId", "currentTravelTime", "timestamp"]
+    },
+    "SafetyHotspot": {
+      "title": "Safety Hotspot",
+      "description": "Marks high-accident zones on the map.",
+      "type": "object",
+      "properties": {
+        "locationName": { "type": "string", "description": "Name of the hotspot." },
+        "coordinates": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          },
+          "required": ["lat", "lng"]
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": ["Low", "Med", "High"],
+          "description": "Risk level of the hotspot."
+        }
+      },
+      "required": ["locationName", "coordinates", "riskLevel"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profiles indexed by their Firebase Auth UID."
+    },
+    "/traffic_logs/{logId}": {
+      "schema": "TrafficLog",
+      "description": "Historical and real-time traffic logs."
+    },
+    "/safety_hotspots/{hotspotId}": {
+      "schema": "SafetyHotspot",
+      "description": "Publicly available safety hotspots for mapping."
+    }
+  }
+}

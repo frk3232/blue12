@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required)
+    //   - homeCity: string (optional)
+    //   - savedDestinations: list (optional)
+    //
+    // Collection: traffic_logs
+    // Document ID: {logId}
+    // Fields:
+    //   - routeId: string (required)
+    //   - currentTravelTime: number (required)
+    //   - aiPredictedTime: number (optional)
+    //   - timestamp: timestamp (required)
+    //
+    // Collection: safety_hotspots
+    // Document ID: {hotspotId}
+    // Fields:
+    //   - locationName: string (required)
+    //   - coordinates: map (required)
+    //   - riskLevel: string (required, enum: Low, Med, High)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "fadlur775@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() > 0 &&
+        (!('homeCity' in data) || (data.homeCity is string && data.homeCity.size() < 100)) &&
+        (!('savedDestinations' in data) || data.savedDestinations is list);
+    }
+
+    function isValidTrafficLog(data) {
+      return data.routeId is string && data.routeId.size() > 0 &&
+        data.currentTravelTime is number &&
+        (!('aiPredictedTime' in data) || data.aiPredictedTime is number) &&
+        data.timestamp is timestamp;
+    }
+
+    function isValidSafetyHotspot(data) {
+      return data.locationName is string && data.locationName.size() > 0 &&
+        data.coordinates is map &&
+        data.coordinates.lat is number && data.coordinates.lng is number &&
+        data.riskLevel in ['Low', 'Med', 'High'];
+    }
+
+    // ===============================================================
+    // Match Rules
+    // ===============================================================
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /traffic_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidTrafficLog(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /safety_hotspots/{hotspotId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin() && isValidSafetyHotspot(request.resource.data);
+    }
+  }
+}
